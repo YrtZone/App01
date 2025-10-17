@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Conteúdo - YouTube</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            color: var(--text-color);
+        }
+        .header {
+            background-color: var(--card-bg);
+            padding: 15px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .auth-status { display: flex; align-items: center; gap: 10px; }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; }
+        .status-indicator.connected { background-color: var(--success-color); }
+        .status-indicator.disconnected { background-color: var(--danger-color); }
+        .main-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            align-items: flex-start;
+        }
+        .left-column { flex: 1; }
+        .right-column { flex: 2; }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 25px;
+        }
+        .card h2 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            font-size: 1.25rem;
+        }
+        form div { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        button {
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 12px 18px;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #auth-button { background-color: var(--danger-color); color: white; }
+        #generate-ai-button { background-color: var(--primary-color); color: white; margin-top: 10px; }
+        #submit-button { background-color: var(--success-color); color: white; }
+        button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--light-color); font-size: 0.9rem; }
+        td .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: white; text-transform: uppercase; }
+        .status-agendado { background-color: var(--warning-color); color: #333; }
+        .status-postado { background-color: var(--success-color); }
+        .status-erro { background-color: var(--danger-color); }
+        .status-processando { background-color: var(--primary-color); }
+        .notification {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .notification.show { display: block; }
+        .notification.success { background-color: #d4edda; color: #155724; }
+        .notification.error { background-color: #f8d7da; color: #721c24; }
+
+        @media (max-width: 900px) {
+            .main-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>Dashboard de Conteúdo</h1>
+        <div id="auth-status" class="auth-status">
+            <div id="auth-indicator" class="status-indicator disconnected"></div>
+            <span id="auth-text">Desconectado</span>
+            <button id="auth-button" style="display: none; width: auto;">Conectar ao YouTube</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="left-column">
+            <div class="card">
+                <h2>Agendar Novo Vídeo</h2>
+                <form id="upload-form">
+                    <div>
+                        <label for="video">Arquivo de Vídeo</label>
+                        <input type="file" id="video" name="video" accept="video/*" required>
+                    </div>
+                    <div>
+                        <label for="video-summary">Resumo para IA</label>
+                        <textarea id="video-summary" rows="4" placeholder="Cole aqui um resumo para a IA..."></textarea>
+                        <button type="button" id="generate-ai-button">✨ Gerar com IA</button>
+                    </div>
+                    <div>
+                        <label for="title">Título</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    <div>
+                        <label for="description">Descrição</label>
+                        <textarea id="description" name="description" rows="5"></textarea>
+                    </div>
+                    <div>
+                        <label for="tags">Tags (separadas por vírgula)</label>
+                        <input type="text" id="tags" name="tags">
+                    </div>
+                    <div>
+                        <label for="scheduled_time">Data e Hora do Agendamento</label>
+                        <input type="datetime-local" id="scheduled_time" name="scheduled_time" required>
+                    </div>
+                    <button type="submit" id="submit-button" disabled>Agendar Vídeo</button>
+                </form>
+                <div id="notification-area" class="notification"></div>
+            </div>
+        </div>
+        <div class="right-column">
+            <div class="card">
+                <h2>Fila de Agendamentos</h2>
+                <div style="overflow-x: auto;">
+                    <table id="agendamentos-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Título</th>
+                                <th>Data Agendada</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Seletores ---
+        const authIndicator = document.getElementById('auth-indicator');
+        const authText = document.getElementById('auth-text');
+        const authButton = document.getElementById('auth-button');
+        const submitButton = document.getElementById('submit-button');
+        const uploadForm = document.getElementById('upload-form');
+        const notificationArea = document.getElementById('notification-area');
+        const generateAiButton = document.getElementById('generate-ai-button');
+        const agendamentosTableBody = document.querySelector('#agendamentos-table tbody');
+        const API_URL = 'http://localhost:5000';
+
+        // --- Funções ---
+        function showNotification(message, type = 'success') {
+            notificationArea.textContent = message;
+            notificationArea.className = `notification ${type} show`;
+            setTimeout(() => { notificationArea.className = 'notification'; }, 5000);
+        }
+
+        async function initializePage() {
+            try {
+                const response = await fetch(`${API_URL}/api/auth/status`);
+                const data = await response.json();
+                if (data.authenticated) {
+                    authIndicator.className = 'status-indicator connected';
+                    authText.textContent = 'Conectado';
+                    authButton.style.display = 'none';
+                    submitButton.disabled = false;
+                    loadAgendamentos();
+                } else {
+                    authIndicator.className = 'status-indicator disconnected';
+                    authText.textContent = 'Desconectado';
+                    authButton.style.display = 'inline-block';
+                    submitButton.disabled = true;
+                }
+            } catch (error) {
+                authText.textContent = 'Servidor Offline';
+                showNotification('Erro ao conectar com o servidor. Verifique se o app.py está rodando.', 'error');
+            }
+        }
+
+        async function loadAgendamentos() {
+            try {
+                const response = await fetch(`${API_URL}/api/agendamentos`);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+
+                agendamentosTableBody.innerHTML = '';
+                if (data.agendamentos.length === 0) {
+                    agendamentosTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Nenhum vídeo agendado.</td></tr>`;
+                } else {
+                    data.agendamentos.forEach(item => {
+                        const row = `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${item.titulo}</td>
+                                <td>${new Date(item.data_agendamento).toLocaleString('pt-BR')}</td>
+                                <td><span class="status-badge status-${item.status}">${item.status}</span></td>
+                            </tr>
+                        `;
+                        agendamentosTableBody.innerHTML += row;
+                    });
+                }
+            } catch (error) {
+                agendamentosTableBody.innerHTML = `<tr><td colspan="4">Erro ao carregar agendamentos: ${error.message}</td></tr>`;
+            }
+        }
+
+        // --- Event Listeners ---
+        authButton.addEventListener('click', async () => { /* ... (mesma lógica de antes) ... */ });
+        generateAiButton.addEventListener('click', async () => { /* ... (mesma lógica de antes) ... */ });
+        uploadForm.addEventListener('submit', async (event) => { /* ... (mesma lógica de antes, mas usando showNotification) ... */ });
+        
+        // --- Lógica Completa dos Event Listeners ---
+        authButton.addEventListener('click', async () => {
+            authText.textContent = 'Autenticando...';
+            try {
+                const response = await fetch(`${API_URL}/api/auth`);
+                if (!response.ok) throw new Error((await response.json()).error);
+                alert('Autenticação concluída! A página será atualizada.');
+                location.reload();
+            } catch (error) {
+                alert(`Erro na autenticação: ${error.message}`);
+                initializePage();
+            }
+        });
+
+        generateAiButton.addEventListener('click', async () => {
+            const summary = document.getElementById('video-summary').value;
+            if (!summary.trim()) {
+                showNotification('Por favor, insira um resumo para a IA.', 'error');
+                return;
+            }
+            generateAiButton.disabled = true;
+            generateAiButton.textContent = 'Pensando...';
+            try {
+                const response = await fetch(`${API_URL}/api/generate-content`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ summary }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                document.getElementById('title').value = data.title;
+                document.getElementById('description').value = data.description;
+                document.getElementById('tags').value = data.tags;
+                showNotification('Conteúdo gerado pela IA!', 'success');
+            } catch (error) {
+                showNotification(`Erro da IA: ${error.message}`, 'error');
+            } finally {
+                generateAiButton.disabled = false;
+                generateAiButton.textContent = '✨ Gerar com IA';
+            }
+        });
+        
+        uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Agendando...';
+            try {
+                const response = await fetch(`${API_URL}/api/schedule/youtube`, {
+                    method: 'POST',
+                    body: new FormData(uploadForm),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                showNotification(`Vídeo agendado com sucesso! (ID: ${data.id_agendamento})`, 'success');
+                uploadForm.reset();
+                loadAgendamentos();
+            } catch (error) {
+                showNotification(`Erro ao agendar: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Agendar Vídeo';
+            }
+        });
+
+        // Inicia tudo
+        initializePage();
+        setInterval(loadAgendamentos, 30000); // Atualiza a lista de agendamentos a cada 30 segundos
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Ambiente virtual do Python - nunca deve ser enviado
+venv/
+
+# Arquivos de cache do Python
+__pycache__/
+*.pyc
+
+# Arquivo com suas chaves de API secretas
+.env
+
+# Arquivo com seu token de login do Google salvo
+token.pickle
+
+# Pasta onde os vídeos são salvos temporariamente
+uploads/
+
+# Arquivos de configuração do editor (opcional, mas boa prática)
+.vscode/
+
+client_secret.json
